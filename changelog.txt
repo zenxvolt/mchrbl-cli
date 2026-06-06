@@ -1,5 +1,5 @@
 v2.3-2026-06-07
-    Fix Bug & Optimization
-        1. Perbaikan untuk kesalahan deteksi Core CPU.
-        2. Optimisasi perhitungan average ping menggunakan weighted median yg versi sebelumnya hanya menggunakan average.
-        3. Penambahan safety margin 30ms untuk tiap hero.
+Fix Bug & Optimization
+- Perbaikan untuk kesalahan deteksi Core CPU.
+- Perhitungan average ping menggunakan weighted median.
+- Penambahan safety margin 30ms.
