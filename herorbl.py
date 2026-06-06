@@ -337,6 +337,7 @@ def main():
     print(colored("="*60,Fore.CYAN))
     print(colored("                  MI-COMMUNITY HERO REQ-BL",Fore.WHITE))
     print(colored(f"                    {CURRENT_VERSION}",Fore.YELLOW))
+    print(colored("                    GiHub @ProjectRedis",Fore.YELLOW))
     print(colored("="*60,Fore.CYAN))
     print()
 
