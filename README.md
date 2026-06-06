@@ -51,3 +51,16 @@ reload termux mu dan ketik
 ```bash
 ubl-go
 ```
+
+---
+
+## 🔑 Cara ambil "Cookie" di Android
+
+1. Install aplikasi network sniffer (**Proxyman, HTTP Toolkit**, **HTTP Sniffer**, **PCAPdroid**) bebas pilih sesuai keinginan.
+2. Jalankan aplikasi sniffer nya biasanya bakal meminta izin VPN.
+3. Buka aplikasi **Xiaomi Community app** masuk ke halaman **Unlock Bootloader** letak nya di tab **Me** di pojok kanan bawah.
+4. Setelah itu balik ke aplikasi sniffer nya matikan VPN atau service nya lalu cari:
+   `https://sgp-api.buy.mi.com/bbs/api/global/apply/bl-auth`
+5. Cari di bagian **Headers** cari apapun yg ada kata `Cookie:`. 
+6. Salin text panjang setelah kata `Cookie:` yg punya awalan `new_bbs_serviceToken`.
+7. Udah tinggal paste/tempel aja di tool nya.
