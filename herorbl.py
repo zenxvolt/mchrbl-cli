@@ -38,7 +38,7 @@ TAG_WIDTH = 12
 MSG_WIDTH = 16
 PING_SAMPLES = 5
 BRACKET_FACTOR = 0.8
-CURRENT_VERSION = "v2.3.1-Rev.2026.06.07"
+CURRENT_VERSION = "v2.3.1b-Rev.2026.06.07"
 
 print_lock = mp.Lock()
 
@@ -377,8 +377,8 @@ def main():
     debug = input(colored(f'{"[Input!]":<14}', Fore.YELLOW) + " Mode Debug (y/n): ").lower() == 'y'
     target_ms = get_accurate_now_ms(base_time, base_perf, ntp_offset) + 20000 if debug else get_next_beijing_midnight_ms()
 
-    count_input = input(colored(f'{"[Input!]":<14}', Fore.YELLOW) + " Recruit Hero (Default 12): ")
-    trigger_count = int(count_input) if count_input.isdigit() else 12
+    count_input = input(colored(f'{"[Input!]":<14}', Fore.YELLOW) + " Recruit Hero (Default 4): ")
+    trigger_count = int(count_input) if count_input.isdigit() else 4
 
     # ===== Countdown start =====
     target_ping_ms = target_ms - 15000
