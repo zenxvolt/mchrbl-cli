@@ -131,7 +131,7 @@ def test_cookie(cookie, token_label):
         code = res_json.get("code", -1)
 
         code_map = {
-            100004: (Fore.RED, "[Error]", f"{token_label} Kadaluarsa / Need Login!"),
+            100004: (Fore.RED, "[Error.]", f"{token_label} Kadaluarsa / Need Login!"),
         }
 
         if code in code_map:
@@ -145,13 +145,13 @@ def test_cookie(cookie, token_label):
         deadline = data.get("deadline_format", "")
 
         status_map = {
-            (4, 1): (Fore.GREEN, "[Account.]", f"Status {token_label}: ELIGIBLE (Siap War!)"),
-            (4, 2): (Fore.RED, "[Account.]", f"Status {token_label}: BLOCKED hingga {deadline}"),
-            (4, 3): (Fore.YELLOW, "[Account.]", f"Status {token_label}: Akun belum berumur 30 Hari!"),
+            (4, 1): (Fore.GREEN, "[Valid.]", f"Status {token_label}: ELIGIBLE (Siap War!)"),
+            (4, 2): (Fore.RED, "[Blocked.]", f"Status {token_label}: BLOCKED hingga {deadline}"),
+            (4, 3): (Fore.YELLOW, "[Warn!.]", f"Status {token_label}: Akun belum berumur 30 Hari!"),
         }
 
         if is_pass == 1:
-            col, tag, msg = Fore.GREEN, "[Account.]", f"Status {token_label}: APPROVED (Berlaku s/d {deadline})"
+            col, tag, msg = Fore.GREEN, "[Approved..]", f"Status {token_label}: APPROVED (Berlaku s/d {deadline})"
         else:
             col, tag, msg = status_map.get(
                 (is_pass, btn_state),
@@ -162,7 +162,7 @@ def test_cookie(cookie, token_label):
         return True
 
     except Exception as e:
-        log("[Error]", f"{token_label} Gagal terhubung: {e}", Fore.RED)
+        log("[Error.]", f"{token_label} Gagal terhubung: {e}", Fore.RED)
         return False
 
 def send_wave(id, target_wave, cookie, base_time_ms, perf_base_ns, offset, label, output_dict, core_id=None):
@@ -171,7 +171,7 @@ def send_wave(id, target_wave, cookie, base_time_ms, perf_base_ns, offset, label
             os.sched_setaffinity(0, {core_id})
             log("[Success.]", f"Hero-{id:02d} berhasil diikat ke core {core_id}", Fore.GREEN)
         except Exception as e:
-            log("[Error]", f"Hero-{id:02d} gagal diikat ke core {core_id}: {e}", Fore.RED)
+            log("[Error.]", f"Hero-{id:02d} gagal diikat ke core {core_id}: {e}", Fore.RED)
 
     host = "sgp-api.buy.mi.com"
     path = "/bbs/api/global/apply/bl-auth"
@@ -389,4 +389,4 @@ def main():
 if __name__ == "__main__":
     mp.freeze_support() 
     main()
-        
+    
