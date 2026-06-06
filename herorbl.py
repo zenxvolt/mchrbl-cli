@@ -8,7 +8,6 @@ import ssl
 import json
 import getpass
 import statistics
-import random
 import time
 from datetime import datetime, timedelta, timezone
 import multiprocessing as mp
@@ -40,8 +39,6 @@ MSG_WIDTH = 16
 PING_SAMPLES = 5
 BRACKET_FACTOR = 0.8
 
-
-# ================= UI & LOGGING ================= #
 print_lock = mp.Lock()
 
 def colored(msg, color):
@@ -58,25 +55,22 @@ def get_result_meaning(code):
     if code == 6: return Fore.RED, "[Failed.]", "Server sibuk"
     return Fore.RED, "[Failed.]", f"Result code:{code}"
 
-
-# ================= HELPER & NETWORK ================= #
-def get_big_cores(num_big=4):
+# ================= CORE DETECTION ================= #
+def get_big_cores(threshold=2000000):
     cores = []
     cpu_dir = "/sys/devices/system/cpu/"
     for i in range(os.cpu_count() or 1):
         try:
             with open(f"{cpu_dir}cpu{i}/cpufreq/cpuinfo_max_freq") as f:
                 maxf = int(f.read().strip())
-            with open(f"{cpu_dir}cpu{i}/cpufreq/cpuinfo_min_freq") as f:
-                minf = int(f.read().strip())
-            cores.append((i, maxf, minf))
+            if maxf >= threshold:
+                cores.append(i)
         except:
             continue
-    cores.sort(key=lambda x: x[1], reverse=True)
-    big_cores = [c[0] for c in cores[:num_big]]
-    for c in big_cores:
+    cores.sort()
+    for c in cores:
         log("[Info.]", f"CPU{c} terdeteksi sebagai big core", Fore.WHITE)
-    return big_cores
+    return cores
 
 def get_ntp_offset():
     client = ntplib.NTPClient()
@@ -121,8 +115,24 @@ def measure_latency():
     session.close()
     return int(sum(times) / len(times)) if times else 300
 
+# ================= PURE PYTHON WEIGHTED MEDIAN ================= #
+def weighted_median(data, weights=None):
+    """
+    Weighted median tanpa numpy.
+    """
+    data = list(data)
+    if weights is None:
+        weights = [1]*len(data)
+    combined = sorted(zip(data, weights), key=lambda x: x[0])
+    total_weight = sum(weights)
+    cum_weight = 0
+    for val, w in combined:
+        cum_weight += w
+        if cum_weight >= total_weight / 2:
+            return val
+    return combined[-1][0]
 
-# ================= CORE API TASKS ================= #
+# ================= CORE API TASK ================= #
 def test_cookie(cookie, token_label):
     headers = {"Cookie": cookie, "User-Agent": USER_AGENT}
     try:
@@ -130,13 +140,8 @@ def test_cookie(cookie, token_label):
         res_json = res.json()
         code = res_json.get("code", -1)
 
-        code_map = {
-            100004: (Fore.RED, "[Error.]", f"{token_label} Kadaluarsa / Need Login!"),
-        }
-
-        if code in code_map:
-            col, tag, msg = code_map[code]
-            log(tag, msg, col)
+        if code == 100004:
+            log("[Error.]", f"{token_label} Kadaluarsa / Need Login!", Fore.RED)
             return False
 
         data = res_json.get("data", {})
@@ -144,20 +149,18 @@ def test_cookie(cookie, token_label):
         btn_state = data.get("button_state", -1)
         deadline = data.get("deadline_format", "")
 
-        status_map = {
-            (4, 1): (Fore.GREEN, "[Valid.]", f"Status {token_label}: ELIGIBLE (Siap War!)"),
-            (4, 2): (Fore.RED, "[Blocked.]", f"Status {token_label}: BLOCKED hingga {deadline}"),
-            (4, 3): (Fore.YELLOW, "[Warn!.]", f"Status {token_label}: Akun belum berumur 30 Hari!"),
-        }
-
         if is_pass == 1:
             col, tag, msg = Fore.GREEN, "[Approved..]", f"Status {token_label}: APPROVED (Berlaku s/d {deadline})"
         else:
+            status_map = {
+                (4, 1): (Fore.GREEN, "[Valid.]", f"Status {token_label}: ELIGIBLE (Siap War!)"),
+                (4, 2): (Fore.RED, "[Blocked.]", f"Status {token_label}: BLOCKED hingga {deadline}"),
+                (4, 3): (Fore.YELLOW, "[Warn!.]", f"Status {token_label}: Akun belum berumur 30 Hari!"),
+            }
             col, tag, msg = status_map.get(
                 (is_pass, btn_state),
                 (Fore.WHITE, "[Account.]", f"{token_label} Valid (Unknown is_pass: {is_pass})")
             )
-
         log(tag, msg, col)
         return True
 
@@ -165,6 +168,7 @@ def test_cookie(cookie, token_label):
         log("[Error.]", f"{token_label} Gagal terhubung: {e}", Fore.RED)
         return False
 
+# ===================== SEND WAVE ===================== #
 def send_wave(id, target_wave, cookie, base_time_ms, perf_base_ns, offset, label, output_dict, core_id=None):
     if core_id is not None:
         try:
@@ -193,8 +197,7 @@ def send_wave(id, target_wave, cookie, base_time_ms, perf_base_ns, offset, label
         context = ssl.create_default_context()
         with context.wrap_socket(sock, server_hostname=host) as ssock:
             gc.disable()
-
-            # ===== Fase 1 & 2: Sleep & Yield =====
+            # Sleep & yield
             while True:
                 now = get_accurate_now_ms(base_time_ms, perf_base_ns, offset)
                 remain = target_wave - now
@@ -204,12 +207,10 @@ def send_wave(id, target_wave, cookie, base_time_ms, perf_base_ns, offset, label
                     time.sleep(0)
                 else:
                     break
-
-            # ===== Fase 3: Pure Spin-lock =====
-            while (base_time_ms + ((time.perf_counter_ns() - perf_base_ns) // 1_000_000) + offset) < target_wave:
+            # Spin-lock
+            while (base_time_ms + ((time.perf_counter_ns() - perf_base_ns)//1_000_000) + offset) < target_wave:
                 pass
-                
-            # ===== Trigger Payload =====
+            # Trigger
             try:
                 ssock.sendall(raw_http_request)
                 drift = get_accurate_now_ms(base_time_ms, perf_base_ns, offset) - target_wave
@@ -217,45 +218,37 @@ def send_wave(id, target_wave, cookie, base_time_ms, perf_base_ns, offset, label
                 gc.enable()
                 output_dict[id-1] = (Fore.RED, f"{'[Failed.]':<{TAG_WIDTH}}", f"{'Send Error':<{MSG_WIDTH}} [Hero-{id:02d}] | {e_send}")
                 return
-
             gc.enable()
-
-            # ===== Parse Response =====
+            # Parse response
             try:
                 resp_bytes = ssock.recv(4096)
                 resp_str = resp_bytes.decode('utf-8', errors='ignore')
                 if "\r\n\r\n" in resp_str:
-                    body = resp_str.split("\r\n\r\n", 1)[1]
+                    body = resp_str.split("\r\n\r\n",1)[1]
                     resp_json = json.loads(body)
-                    result = resp_json.get("data", {}).get("apply_result", -1)
+                    result = resp_json.get("data", {}).get("apply_result",-1)
                 else:
                     result = -1
-
                 col, tag, msg = get_result_meaning(result)
                 tag_padded = f"{tag:<{TAG_WIDTH}}"
                 msg_padded = f"{msg:<{MSG_WIDTH}}"
                 hero_tag = f"[Hero-{id:02d}]"
                 output_dict[id-1] = (col, tag_padded, f"{msg_padded} {hero_tag:<12} | Drift: {drift:+.1f}ms")
-
             except Exception as e_parse:
                 tag_padded = f"{'[Failed.]':<{TAG_WIDTH}}"
                 msg_padded = f"{'Parse Error':<{MSG_WIDTH}}"
                 hero_tag = f"[Hero-{id:02d}]"
                 output_dict[id-1] = (Fore.RED, tag_padded, f"{msg_padded} {hero_tag:<12} | Drift: {drift:+.1f}ms | {e_parse}")
-
     except Exception as e_outer:
-        try:
-            sock.close()
-        except:
-            pass
+        try: sock.close()
+        except: pass
         output_dict[id-1] = (Fore.RED, f"{'[Failed.]':<{TAG_WIDTH}}", f"{'SSL/Connect Error':<{MSG_WIDTH}} [Hero-{id:02d}] | {e_outer}")
 
-
-# ================= MAIN EXECUTION ================= #
+# ================= MAIN ================= #
 def main():
     print(colored("="*60, Fore.CYAN))
     print(colored("                  MI-COMMUNITY HERO REQ-BL", Fore.WHITE))
-    print(colored("                    v2.0-Rev.2026.06.05", Fore.YELLOW))
+    print(colored("                    v2.3-Rev.2026.06.07", Fore.YELLOW))
     print(colored("="*60, Fore.CYAN))
     print()
 
@@ -280,9 +273,7 @@ def main():
         if cookie_b:
             log("[Check!]", "Memeriksa status Token-B...", Fore.MAGENTA)
             valid_b = test_cookie(cookie_b, "Token-B")
-
-        if valid_a and valid_b: 
-            break
+        if valid_a and valid_b: break
         print()
         log("[Info.]", "Silakan masukkan ulang seluruh credential.\n", Fore.YELLOW)
 
@@ -299,7 +290,7 @@ def main():
     count_input = input(colored(f'{"[Input!]":<14}', Fore.YELLOW) + " Recruit Hero (Default 12): ")
     trigger_count = int(count_input) if count_input.isdigit() else 12
 
-    # ========== Countdown start ==========
+    # ===== Countdown start =====
     target_ping_ms = target_ms - 15000
     prefix_wait_start = colored(f"{'[Wait!]':<{LABEL_WIDTH}}", Fore.CYAN)
     while True:
@@ -316,22 +307,26 @@ def main():
         time.sleep(0.05)
     print()
 
+    # ===== Ping sampling & Weighted Median =====
     ping_samples = []
+    weights = []
     log("[Info.]", f"Mulai PING! {PING_SAMPLES} kali...", Fore.WHITE)
-    for _ in range(PING_SAMPLES):
+    for i in range(PING_SAMPLES):
         latency_sample = measure_latency()
         ping_samples.append(latency_sample)
+        weights.append(i+1)  # bobot lebih tinggi untuk sample terbaru
         log("[Ping!]", f"Sample latency: {latency_sample}ms", Fore.MAGENTA)
         time.sleep(1)
 
-    latency_avg = int(statistics.mean(ping_samples))
-    base_send = target_ms - latency_avg
-    bracket_half = int(latency_avg * BRACKET_FACTOR) + 50
-    log("[Active.]", f"Dynamic Bracket ±{bracket_half}ms (Avg Ping: {latency_avg}ms)", Fore.GREEN)
+    latency_effective = int(weighted_median(ping_samples, weights))
+    base_send = target_ms - latency_effective
+    bracket_half = int(latency_effective * BRACKET_FACTOR) + 50
+    log("[Active.]", f"Dynamic Bracket ±{bracket_half}ms (Weighted Median Ping: {latency_effective}ms)", Fore.GREEN)
 
-    # ========== Distribusi Offset ==========
-    safety_margin = 30 
-    base_offsets = [int(-bracket_half + safety_margin + (2 * (bracket_half - safety_margin) * i) / (trigger_count - 1)) if trigger_count > 1 else 0 for i in range(trigger_count)]
+    # ===== Distribusi offset & thread Hero =====
+    safety_margin = 30
+    offsets = [int(-bracket_half + safety_margin + (2 * (bracket_half - safety_margin) * i) / (trigger_count - 1)) if trigger_count > 1 else 0 for i in range(trigger_count)]
+    
     manager = mp.Manager()
     output_dict = manager.dict()
     processes = []
@@ -341,17 +336,16 @@ def main():
         label_tok = "Tok-B" if cookie_b and wave_id % 2 == 0 else "Tok-A"
         cookie_use = cookie_b if label_tok == "Tok-B" else cookie_a
         target_wave = base_send + offset
-        
         dt_beijing = datetime.fromtimestamp(target_wave / 1000.0, BEIJING_TZ)
         milliseconds = int(target_wave % 1000)
         ts = f"{dt_beijing.strftime('%H:%M:%S')}.{milliseconds:03d}"
-        
         log("[Info.]", f"Hero-{wave_id:02d} [{label_tok}] Standby at {ts} CST [Bracket: {offset:+}ms]")
         core_id = big_cores[idx % len(big_cores)] if big_cores else None
         p = mp.Process(target=send_wave, args=(wave_id, target_wave, cookie_use, base_time, base_perf, ntp_offset, label_tok, output_dict, core_id))
         processes.append(p)
         time.sleep(0.3)
 
+    # ===== Countdown menunggu aba-aba =====
     prefix_wait = colored(f"{'[Wait!]':<{LABEL_WIDTH}}", Fore.CYAN)
     while get_accurate_now_ms(base_time, base_perf, ntp_offset) < base_send - 1000:
         remain_ms = base_send - get_accurate_now_ms(base_time, base_perf, ntp_offset)
@@ -373,7 +367,7 @@ def main():
     print()
     log("[Info.]", "Laporan hasil war.", Fore.WHITE)
     time.sleep(1)
-    
+
     for i in range(trigger_count):
         item = output_dict.get(i)
         if isinstance(item, tuple):
@@ -388,4 +382,4 @@ def main():
 if __name__ == "__main__":
     mp.freeze_support() 
     main()
-    
+        
