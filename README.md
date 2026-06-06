@@ -33,8 +33,12 @@ Dibangun dengan arsitektur memori yang brutal, skrip ini mem- *bypass* latensi l
 
 Terminal apapun itu
 
-Jika kamu menggunakan **Termux** di Android wajib termux versi f-droid atau versi github release karena versi playstore sudah kadaluarsa.
+Jika kamu menggunakan **Termux** di Android wajib termux versi [F-Droid](https://f-droid.org/id/packages/com.termux/) atau versi [GitHub Release](https://github.com/termux/termux-app/releases) karena versi playstore sudah kadaluarsa.
 Jalankan perintah ini terlebih dahulu untuk persiapan:
+```bash
+termux-setup-storage
+```
+lalu izinkan dan lanjutkan perintah berikutnya
 ```bash
 pkg update && pkg upgrade -y
 pkg install python git curl -y
@@ -42,4 +46,8 @@ pkg install python git curl -y
 lalu copy ini di terminal mu
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/ProjectRedis/mchrbl-cli/refs/heads/main/install.sh)
+```
+reload termux mu dan ketik
+```bash
+ubl-go
 ```
