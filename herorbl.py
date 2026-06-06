@@ -22,7 +22,7 @@ try:
     init(autoreset=True)
 except ImportError:
     class Fore:
-        MAGENTA = GREEN = RED = YELLOW = CYAN = WHITE = ""
+        MAGENTA = BLUE = GREEN = RED = YELLOW = CYAN = WHITE = ""
     class Style:
         RESET_ALL = ""
 
@@ -38,7 +38,7 @@ TAG_WIDTH = 12
 MSG_WIDTH = 16
 PING_SAMPLES = 5
 BRACKET_FACTOR = 0.8
-CURRENT_VERSION = "v2.3.1c-Rev.2026.06.07"
+CURRENT_VERSION = "v2.3.1d-Rev.2026.06.07"
 
 print_lock = mp.Lock()
 
@@ -337,7 +337,7 @@ def main():
     print(colored("="*60,Fore.CYAN))
     print(colored("                  MI-COMMUNITY HERO REQ-BL",Fore.WHITE))
     print(colored(f"                    {CURRENT_VERSION}",Fore.YELLOW))
-    print(colored("                    GiHub @ProjectRedis",Fore.YELLOW))
+    print(colored("                    GiHub @ProjectRedis",Fore.BLUE))
     print(colored("="*60,Fore.CYAN))
     print()
 
