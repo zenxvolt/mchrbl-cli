@@ -169,6 +169,93 @@ def test_cookie(cookie, token_label):
         log("[Error.]", f"{token_label} Gagal terhubung: {e}", Fore.RED)
         return False
 
+# ================= UPDATE CHECKER ================= #
+def check_update():
+    url_version = "https://raw.githubusercontent.com/ProjectRedis/mchrbl-cli/refs/heads/main/herorbl.py"
+    url_changelog = "https://raw.githubusercontent.com/ProjectRedis/mchrbl-cli/refs/heads/main/changelog.txt"
+
+    try:
+        r = requests.get(url_version, timeout=5)
+        r.raise_for_status()
+
+        remote_version = None
+        for line in r.text.splitlines():
+            if line.startswith("CURRENT_VERSION"):
+                remote_version = (
+                    line.split("=")[1]
+                    .strip()
+                    .strip('"')
+                    .strip("'")
+                )
+                break
+
+        if not remote_version:
+            log("[Info.]", "Tidak bisa membaca versi di GitHub.", Fore.YELLOW)
+            return
+
+        if remote_version == CURRENT_VERSION:
+            log("[Info.]", f"Script sudah terbaru ({CURRENT_VERSION})", Fore.WHITE)
+            return
+
+        print()
+        log(
+            "[Info.]",
+            f"Update tersedia: {remote_version}",
+            Fore.WHITE
+        )
+        log(
+            "[Info.]",
+            f"Versi saat ini : {CURRENT_VERSION}",
+            Fore.WHITE
+        )
+
+        print()
+
+        try:
+            r2 = requests.get(url_changelog, timeout=5)
+            r2.raise_for_status()
+
+            #log("[Changelog.]", "", Fore.WHITE)
+
+            for line in r2.text.strip().splitlines():
+                print(" " * LABEL_WIDTH + line)
+
+        except Exception:
+            log("[Info.]", "Changelog tidak ditemukan.", Fore.YELLOW)
+
+        print()
+
+        jawab = input(
+            colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.YELLOW)
+            + " Update sekarang? (y/n): "
+        ).strip().lower()
+
+        if jawab == "y":
+            try:
+                import sys
+
+                script_path = os.path.abspath(sys.argv[0])
+
+                r3 = requests.get(url_version, timeout=10)
+                r3.raise_for_status()
+
+                with open(script_path, "w", encoding="utf-8") as f:
+                    f.write(r3.text)
+
+                log("[Success.]", f"Berhasil update ke {remote_version}", Fore.GREEN)
+                log("[Info.]", "Silakan jalankan ulang script.", Fore.CYAN)
+
+                raise SystemExit(0)
+
+            except Exception as e:
+                log("[Error.]", f"Gagal update otomatis: {e}", Fore.RED)
+
+        else:
+            log("[Info.]", "Melanjutkan menggunakan versi saat ini.", Fore.WHITE)
+
+    except Exception as e:
+        log("[Error.]", f"Gagal cek update: {e}", Fore.RED)
+        
 # ===================== SEND WAVE ===================== #
 def send_wave(id, target_wave, cookie, base_time_ms, perf_base_ns, offset, label, output_dict, core_id=None):
     if core_id is not None:
@@ -247,15 +334,17 @@ def send_wave(id, target_wave, cookie, base_time_ms, perf_base_ns, offset, label
 
 # ================= MAIN ================= #
 def main():
-    print(colored("="*60, Fore.CYAN))
-    print(colored("                  MI-COMMUNITY HERO REQ-BL", Fore.WHITE))
-    print(colored("                    v2.3-Rev.2026.06.07", Fore.YELLOW))
-    print(colored("="*60, Fore.CYAN))
+    print(colored("="*60,Fore.CYAN))
+    print(colored("                  MI-COMMUNITY HERO REQ-BL",Fore.WHITE))
+    print(colored(f"                    {CURRENT_VERSION}",Fore.YELLOW))
+    print(colored("="*60,Fore.CYAN))
     print()
 
+    check_update()
+    print()
     big_cores = get_big_cores()
     print()
-    
+
     while True:
         cookie_a = getpass.getpass(colored(f'{"[Input!]":<14}', Fore.YELLOW) + " Paste Cookie A: ").strip()
         if not cookie_a:
