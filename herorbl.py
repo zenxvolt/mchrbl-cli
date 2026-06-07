@@ -252,6 +252,7 @@ def check_update() -> None:
     log("[Info.]", f"Update tersedia : {remote_version}", Fore.WHITE)
     log("[Info.]", f"Versi saat ini  : {CURRENT_VERSION}", Fore.WHITE)
     print()
+    log("[Changelog.]", "", Fore.WHITE)
 
     try:
         r2 = requests.get(url_changelog, timeout=5)
