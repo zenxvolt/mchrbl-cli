@@ -3,3 +3,9 @@ Fix Bug & Optimization
 - Perbaikan untuk kesalahan deteksi Core CPU.
 - Perhitungan average ping menggunakan weighted median.
 - Penambahan safety margin 30ms.
+
+v3.0.0-2026-06-08
+Major Improvement
+- Threading lebih ringan, tidak perlu Manager server process
+- DNS pre-resolve hemat 22-40ms saat war
+- Thread-safe GC semua hero share 1 disable/enable yg aman
