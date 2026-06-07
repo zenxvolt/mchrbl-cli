@@ -243,6 +243,7 @@ def check_update() -> None:
     if not remote_version:
         log("[Info.]", "Tidak bisa membaca versi di GitHub.", Fore.WHITE)
         return
+        
     if remote_version == CURRENT_VERSION:
         log("[Info.]", f"Script sudah terbaru ({CURRENT_VERSION})", Fore.WHITE)
         return
@@ -255,8 +256,35 @@ def check_update() -> None:
     try:
         r2 = requests.get(url_changelog, timeout=5)
         r2.raise_for_status()
-        for line in r2.text.strip().splitlines():
-            print(" " * LABEL_WIDTH + line)
+
+        target_version = remote_version.split('-')[0]
+        
+        capture = False
+        captured_lines = []
+        
+        for line in r2.text.splitlines():
+            line_stripped = line.strip()
+            
+            if capture and line_stripped.startswith("----"):
+                break
+                
+            if line_stripped.startswith(target_version):
+                capture = True
+                
+            if capture:
+                captured_lines.append(line_stripped)
+
+        if captured_lines:
+            for line in captured_lines:
+                if line:
+                    print(" " * LABEL_WIDTH + line)
+                else:
+                    print()
+        else:
+            for line in r2.text.strip().splitlines()[:10]:
+                if line.strip():
+                    print(" " * LABEL_WIDTH + line)
+
     except Exception:
         log("[Info.]", "Changelog tidak ditemukan.", Fore.WHITE)
 
@@ -283,7 +311,7 @@ def check_update() -> None:
         raise
     except Exception as e:
         log("[Error.]", f"Gagal update otomatis: {e}", Fore.RED)
-
+        
 # ─────────────────────── HTTP HELPERS ─────────────────────── #
 def _recv_full(ssock: ssl.SSLSocket, buf: int = 4096) -> bytes:
     data = b""
