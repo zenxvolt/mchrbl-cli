@@ -8,6 +8,7 @@ import json
 import os
 import socket
 import ssl
+import sys
 import getpass
 import time
 import threading
@@ -44,11 +45,91 @@ MSG_WIDTH       = 16
 PING_SAMPLES    = 5
 BRACKET_FACTOR  = 0.8
 SAFETY_MARGIN   = 30
-CURRENT_VERSION = "v3.0.0-Rev.2026.06.08"
+CURRENT_VERSION = "v3.1.0-Rev.2026.06.09"
 
 # ─────────────────────── RUNTIME FLAGS ─────────────────────── #
-
 print_lock = threading.Lock()
+
+# ─────────────────────── LANGUAGE MANAGER (i18n) ─────────────────────── #
+SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
+LANG_FILE = os.path.join(SCRIPT_DIR, ".lang_config")
+LOCALE_DIR = os.path.join(SCRIPT_DIR, "locales")
+
+GITHUB_LOCALE_URL = "https://raw.githubusercontent.com/ProjectRedis/mchrbl-cli/main/locales/"
+
+MENU_BAHASA = {
+    "1": {"code": "id", "name": "Bahasa Indonesia"},
+    "2": {"code": "en", "name": "English"}
+}
+
+TEXTS = {}
+
+def init_language() -> None:
+    global TEXTS
+    
+    force_change = "--lang" in sys.argv
+    force_update = "--update-lang" in sys.argv  # <-- FITUR BARU
+    lang_code = "id"
+    
+    if not force_change and os.path.exists(LANG_FILE):
+        try:
+            with open(LANG_FILE, "r", encoding="utf-8") as f:
+                lang_code = f.read().strip()
+        except Exception:
+            pass
+    else:
+        print(colored("\n[Input!] Select Language:", Fore.YELLOW))
+        for k, v in MENU_BAHASA.items():
+            print(f"  [{k}] {v['name']}")
+            
+        pilih = input(colored("Pilihan / Choice (1/2): ", Fore.YELLOW)).strip()
+        if pilih in MENU_BAHASA:
+            lang_code = MENU_BAHASA[pilih]["code"]
+            
+        try:
+            with open(LANG_FILE, "w", encoding="utf-8") as f:
+                f.write(lang_code)
+        except Exception:
+            pass
+            
+    if not os.path.exists(LOCALE_DIR):
+        os.makedirs(LOCALE_DIR)
+        
+    json_path = os.path.join(LOCALE_DIR, f"{lang_code}.json")
+    
+    # ── FITUR BARU: Hapus JSON lama jika pengguna mengetik --update-lang ──
+    if force_update and os.path.exists(json_path):
+        os.remove(json_path)
+        log("[Info.]", "Force updating language pack...", Fore.YELLOW)
+    # ───────────────────────────────────────────────────────────────────────
+    
+    if not os.path.exists(json_path):
+        print()
+        log("[Info.]", f"Downloading language pack ({lang_code.upper()})...", Fore.CYAN)
+        try:
+            r = requests.get(f"{GITHUB_LOCALE_URL}{lang_code}.json", timeout=10)
+            r.raise_for_status()
+            with open(json_path, "w", encoding="utf-8") as f:
+                f.write(r.text)
+            log("[Success.]", "Language pack installed!", Fore.GREEN)
+        except Exception as e:
+            log("[Error.]", f"Failed to download language: {e}", Fore.RED)
+            return
+            
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            TEXTS = json.load(f)
+    except Exception as e:
+        log("[Error.]", f"Failed to load language file: {e}", Fore.RED)
+
+def _t(key: str, *args) -> str:
+    teks = TEXTS.get(key, key)
+    if args:
+        try:
+            return teks.format(*args)
+        except Exception:
+            return teks
+    return teks
 
 # ─────────────────────── THREAD-SAFE GC ─────────────────────── #
 _gc_ref_lock = threading.Lock()
@@ -72,17 +153,16 @@ def _gc_enable() -> None:
 def colored(msg: str, color: str) -> str:
     return f"{color}{msg}{Style.RESET_ALL}" if _COLORAMA else msg
 
-
 def log(label: str, msg: str, color: str = Fore.WHITE) -> None:
     with print_lock:
         print(f"{colored(f'{label:<{LABEL_WIDTH}}', color)} {msg}")
 
 def get_result_meaning(code: int) -> tuple[str, str, str]:
     table = {
-        1: (Fore.GREEN, "[Approved.]", "Tiket didapat!"),
-        2: (Fore.WHITE, "[Info.]",     "Sudah punya tiket"),
-        3: (Fore.RED,   "[Failed.]",   "Kuota habis"),
-        6: (Fore.RED,   "[Failed.]",   "Server sibuk"),
+        1: (Fore.GREEN, "[Approved.]", _t("ticke_got")),
+        2: (Fore.WHITE, "[Info.]",     _t("ticket_has")),
+        3: (Fore.RED,   "[Failed.]",   _t("ticket_0")),
+        6: (Fore.RED,   "[Failed.]",   _t("ticket_bussy")),
     }
     return table.get(code, (Fore.RED, "[Failed.]", f"Result code: {code}"))
 
@@ -93,7 +173,7 @@ def resolve_server(host: str = SERVER_HOST) -> str:
         log("[Info.]", f"{host} → {ip}", Fore.WHITE)
         return ip
     except Exception as e:
-        log("[Warn!]", f"DNS pre-resolve gagal, pakai hostname: {e}", Fore.YELLOW)
+        log("[Warn!]", _t("dns_pre", e), Fore.YELLOW)
         return host
 
 # ─────────────────────── TIMING ─────────────────────── #
@@ -102,11 +182,11 @@ def get_ntp_offset() -> float:
     for server in ("pool.ntp.org", "id.pool.ntp.org", "time.google.com"):
         try:
             r = client.request(server, version=3, timeout=5)
-            log("[Connected.]", f"Terhubung ke '{server}'", Fore.GREEN)
+            log("[Connected.]", _t("ntp_conn", server), Fore.GREEN)
             return r.offset * 1000.0
         except Exception:
             continue
-    log("[Error]", "Semua server NTP gagal – offset = 0", Fore.RED)
+    log("[Error]", _t("ntp_err"), Fore.RED)
     return 0.0
 
 def get_accurate_now_ms(base_time_ms: int, perf_base_ns: int, offset_ms: float) -> float:
@@ -176,9 +256,9 @@ def get_big_cores(threshold: int = 2_000_000) -> list[int]:
     cores.sort()
     if cores:
         for c in cores:
-            log("[Info.]", f"CPU{c} terdeteksi sebagai big core", Fore.WHITE)
+            log("[Info.]", f"CPU{c} " + _t("cpu_ok"), Fore.WHITE)
     else:
-        log("[Info.]", "Big core tidak terdeteksi (path /sys tidak tersedia)", Fore.WHITE)
+        log("[Info.]", _t("cpu_no"), Fore.WHITE)
     return cores
     
 # ─────────────────────── TOKEN CHECK ─────────────────────── #
@@ -194,7 +274,7 @@ def test_cookie(cookie: str, label: str) -> bool:
         code     = res_json.get("code", -1)
 
         if code == 100004:
-            log("[Error.]", f"{label} Kadaluarsa / Need Login!", Fore.RED)
+            log("[Error.]", f"{label} " + _t("cookie_err"), Fore.RED)
             return False
 
         data      = res_json.get("data", {})
@@ -203,22 +283,22 @@ def test_cookie(cookie: str, label: str) -> bool:
         deadline  = data.get("deadline_format", "")
 
         if is_pass == 1:
-            log("[Approved..]", f"Status {label}: APPROVED (Berlaku s/d {deadline})", Fore.GREEN)
+            log("[Approved..]", f"Status {label}: " + _t("acc_got", deadline), Fore.GREEN)
             return True
 
         col, tag, msg = {
-            (4, 1): (Fore.GREEN,  "[Valid.]",   f"Status {label}: ELIGIBLE (Siap War!)"),
-            (4, 2): (Fore.RED,    "[Blocked.]", f"Status {label}: BLOCKED hingga {deadline}"),
-            (4, 3): (Fore.YELLOW, "[Warn!.]",   f"Status {label}: Akun belum berumur 30 Hari!"),
+            (4, 1): (Fore.GREEN,  "[Valid.]",   f"Status {label}: " + _t("acc_ok")),
+            (4, 2): (Fore.RED,    "[Blocked.]", f"Status {label}: " + _t("acc_block", deadline)),
+            (4, 3): (Fore.YELLOW, "[Warn!.]",   f"Status {label}: " + _t("acc_warn")),
         }.get(
             (is_pass, btn_state),
-            (Fore.WHITE, "[Account.]", f"{label} Valid (Unknown is_pass: {is_pass})"),
+            (Fore.WHITE, "[Account.]", f"{label} " + _t("acc_pass", is_pass)),
         )
         log(tag, msg, col)
         return True
 
     except Exception as e:
-        log("[Error.]", f"{label} Gagal terhubung: {e}", Fore.RED)
+        log("[Error.]", f"{label} " + _t("acc_down", e), Fore.RED)
         return False
 
 # ─────────────────────── UPDATE CHECKER ─────────────────────── #
@@ -231,7 +311,7 @@ def check_update() -> None:
         r = requests.get(url_script, timeout=5)
         r.raise_for_status()
     except Exception as e:
-        log("[Error.]", f"Gagal cek update: {e}", Fore.RED)
+        log("[Error.]", _t("up_err", e), Fore.RED)
         return
 
     remote_version: str | None = None
@@ -241,16 +321,16 @@ def check_update() -> None:
             break
 
     if not remote_version:
-        log("[Info.]", "Tidak bisa membaca versi di GitHub.", Fore.WHITE)
+        log("[Info.]", _t("up_no"), Fore.WHITE)
         return
         
     if remote_version == CURRENT_VERSION:
-        log("[Info.]", f"Script sudah terbaru ({CURRENT_VERSION})", Fore.WHITE)
+        log("[Info.]", _t("up_ok", CURRENT_VERSION), Fore.WHITE)
         return
 
     print()
-    log("[Info.]", f"Update tersedia : {remote_version}", Fore.WHITE)
-    log("[Info.]", f"Versi saat ini  : {CURRENT_VERSION}", Fore.WHITE)
+    log("[Info.]", _t("up_up", remote_version), Fore.WHITE)
+    log("[Info.]", _t("up_now", CURRENT_VERSION), Fore.WHITE)
     print()
     log("[Changelog.]", "", Fore.WHITE)
 
@@ -287,15 +367,15 @@ def check_update() -> None:
                     print(" " * LABEL_WIDTH + line)
 
     except Exception:
-        log("[Info.]", "Changelog tidak ditemukan.", Fore.WHITE)
+        log("[Info.]", _t("change_no"), Fore.WHITE)
 
     print()
     jawab = input(
-        colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.YELLOW) + " Update sekarang? (y/n): "
+        colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.YELLOW) + _t("up_ask")
     ).strip().lower()
 
     if jawab != "y":
-        log("[Info.]", "Melanjutkan menggunakan versi saat ini.", Fore.WHITE)
+        log("[Info.]", _t("up_late"), Fore.WHITE)
         return
 
     import sys
@@ -305,13 +385,20 @@ def check_update() -> None:
         r3.raise_for_status()
         with open(script_path, "w", encoding="utf-8") as f:
             f.write(r3.text)
-        log("[Success.]", f"Berhasil update ke {remote_version}", Fore.GREEN)
-        log("[Info.]",    "Silakan jalankan ulang script.",        Fore.WHITE)
+            
+        # ── FITUR BARU: Hapus Cache Bahasa Saat Script Diperbarui ──
+        if os.path.exists(LOCALE_DIR):
+            import shutil
+            shutil.rmtree(LOCALE_DIR, ignore_errors=True)
+        # ───────────────────────────────────────────────────────────
+            
+        log("[Success.]", _t("up_done", remote_version), Fore.GREEN)
+        log("[Info.]", _t("up_go"), Fore.WHITE)
         raise SystemExit(0)
     except SystemExit:
         raise
     except Exception as e:
-        log("[Error.]", f"Gagal update otomatis: {e}", Fore.RED)
+        log("[Error.]", _t("up_fail", e), Fore.RED)
         
 # ─────────────────────── HTTP HELPERS ─────────────────────── #
 def _recv_full(ssock: ssl.SSLSocket, buf: int = 4096) -> bytes:
@@ -381,9 +468,9 @@ def send_wave(
     if core_id is not None:
         try:
             os.sched_setaffinity(0, {core_id})
-            log("[Success.]", f"Hero-{id:02d} diikat ke core {core_id}", Fore.GREEN)
+            log("[Success.]", _t("pin_ok", id, core_id), Fore.GREEN)
         except Exception as e:
-            log("[Warn!]", f"Hero-{id:02d} floating (gagal pin core): {e}", Fore.YELLOW)
+            log("[Warn!]", _t("pin_no", id, e), Fore.YELLOW)
             
     payload = '{"is_retry": false}'
     raw_req = (
@@ -404,7 +491,6 @@ def send_wave(
         ctx  = ssl.create_default_context()
         with ctx.wrap_socket(sock, server_hostname=SERVER_HOST) as ssock:
 
-            # ── Phase 1: Sleep kasar mendekati target ──
             while True:
                 remain = target_ms - get_accurate_now_ms(base_time_ms, perf_base_ns, offset_ms)
                 if remain > 20:
@@ -414,7 +500,6 @@ def send_wave(
                 else:
                     break
 
-            # ── Phase 2: Spin-lock presisi (shared GC ref counter) ──
             _gc_disable()
             try:
                 while get_accurate_now_ms(base_time_ms, perf_base_ns, offset_ms) < target_ms:
@@ -431,7 +516,6 @@ def send_wave(
             finally:
                 _gc_enable()
 
-            # ── Phase 3: Parse response ──
             try:
                 raw_resp  = _recv_full(ssock)
                 resp_json = _parse_response(raw_resp)
@@ -494,6 +578,8 @@ def main() -> None:
     print(colored("=" * 56,                               Fore.CYAN))
     print()
 
+    init_language()
+
     check_update()
     print()
     big_cores = get_big_cores()
@@ -502,47 +588,47 @@ def main() -> None:
     # ── 1. Input & validasi cookie ──
     while True:
         cookie_a = getpass.getpass(
-            colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.YELLOW) + " Paste Cookie A: "
+            colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.YELLOW) + _t("cookie_a")
         ).strip()
         if not cookie_a:
-            log("[Error]", "Cookie A tidak boleh kosong!\n", Fore.RED)
+            log("[Error]", _t("cookie_0"), Fore.RED)
             continue
-        log("[Success.]", "Cookie A diterima: " + colored("**********", Fore.WHITE), Fore.GREEN)
+        log("[Success.]", _t("cookie_acc", "A") + colored("**********", Fore.WHITE), Fore.GREEN)
 
         cookie_b = getpass.getpass(
-            colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.YELLOW) + " Paste Cookie B (Enter jika kosong): "
+            colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.YELLOW) + _t("cookie_b")
         ).strip()
         if cookie_b:
-            log("[Success.]", "Cookie B diterima: " + colored("**********", Fore.WHITE), Fore.GREEN)
+            log("[Success.]", _t("cookie_acc", "B") + colored("**********", Fore.WHITE), Fore.GREEN)
         print()
-        log("[Check!]", "Memeriksa status Token-A...", Fore.MAGENTA)
+        log("[Check!]", _t("cookie_check", "A"), Fore.MAGENTA)
         valid_a = test_cookie(cookie_a, "Token-A")
         valid_b = True
         if cookie_b:
-            log("[Check!]", "Memeriksa status Token-B...", Fore.MAGENTA)
+            log("[Check!]", _t("cookie_check", "B"), Fore.MAGENTA)
             valid_b = test_cookie(cookie_b, "Token-B")
         if valid_a and valid_b:
             break
         print()
-        log("[Info.]", "Silakan masukkan ulang seluruh credential.\n", Fore.YELLOW)
+        log("[Info.]", _t("cookie_reinput"), Fore.YELLOW)
 
     # ── 2. DNS Pre-resolve ──
     print()
-    log("[Check!]", f"Pre-resolving {SERVER_HOST}...", Fore.MAGENTA)
+    log("[Check!]", _t("dns_pre_start", SERVER_HOST), Fore.MAGENTA)
     server_ip = resolve_server()
 
     # ── 3. NTP sync ──
     print()
-    log("[Check!]", "Sinkronisasi waktu NTP...", Fore.MAGENTA)
+    log("[Check!]", _t("ntp_sync"), Fore.MAGENTA)
     ntp_offset  = get_ntp_offset()
     perf_base   = time.perf_counter_ns()
     time_base   = int(time.time() * 1000)
-    log("[Info.]", f"NTP Offset: {ntp_offset:.3f} ms", Fore.WHITE)
+    log("[Info.]", _t("ntp_offset", ntp_offset), Fore.WHITE)
 
     # ── 4. Konfigurasi jadwal ──
     print()
     debug = (
-        input(colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.YELLOW) + " Mode Debug (y/n): ")
+        input(colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.YELLOW) + _t("input_debug"))
         .strip().lower() == "y"
     )
     target_ms = (
@@ -552,32 +638,28 @@ def main() -> None:
     )
 
     raw_count     = input(
-        colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.YELLOW) + " Recruit Hero (Default 4): "
+        colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.YELLOW) + _t("input_hero")
     ).strip()
     trigger_count = int(raw_count) if raw_count.isdigit() and int(raw_count) > 0 else 4
 
     # ── 5. Tunggu fase ping ──
-    _countdown("Menunggu start:", target_ms - 15_000, time_base, perf_base, ntp_offset)
+    _countdown(_t("wait_start"), target_ms - 15_000, time_base, perf_base, ntp_offset)
 
     # ── 6. Ping sampling ──
-    log("[Info.]", f"Mulai PING! {PING_SAMPLES} kali ke {server_ip}...", Fore.WHITE)
+    log("[Info.]", _t("ping_go", PING_SAMPLES, server_ip), Fore.WHITE)
     ping_samples: list[float] = []
     ping_weights: list[float] = []
     for i in range(PING_SAMPLES):
         sample = measure_latency(server_ip)
         ping_samples.append(sample)
         ping_weights.append(float(i + 1))
-        log("[Ping!]", f"Sample latency: {sample:.1f}ms", Fore.MAGENTA)
+        log("[Ping!]", _t("ping_sample", sample), Fore.MAGENTA)
         time.sleep(1)
 
     eff_latency  = weighted_median(ping_samples, ping_weights)
     base_send    = target_ms - eff_latency
     bracket_half = int(eff_latency * BRACKET_FACTOR) + 50
-    log(
-        "[Active.]",
-        f"Dynamic Bracket ±{bracket_half}ms (Weighted Median: {eff_latency:.1f}ms)",
-        Fore.GREEN,
-    )
+    log("[Active.]", _t("dyn_bracket", bracket_half, eff_latency), Fore.GREEN)
 
     # ── 7. Hitung offset tiap Hero ──
     if trigger_count > 1:
@@ -602,7 +684,7 @@ def main() -> None:
 
         dt_cst = datetime.fromtimestamp(wave_target / 1000.0, BEIJING_TZ)
         ts     = f"{dt_cst.strftime('%H:%M:%S')}.{int(wave_target % 1000):03d}"
-        log("[Info.]", f"Hero-{wave_id:02d} [{tok_label}] Standby at {ts} CST [Bracket: {wave_off:+}ms]")
+        log("[Info.]", _t("hero_standby", wave_id, tok_label, ts, wave_off))
 
         core_id = big_cores[idx % len(big_cores)] if big_cores else None
         t = threading.Thread(
@@ -618,10 +700,10 @@ def main() -> None:
         time.sleep(0.3)
 
     # ── 9. Countdown menuju aba-aba ──
-    _countdown("Menunggu aba-aba", base_send - 1000, time_base, perf_base, ntp_offset)
+    _countdown(_t("wait_war"), base_send - 1000, time_base, perf_base, ntp_offset)
 
     # ── 10. Tembak! ──
-    log("[Active.]", "Hardware Spin-Lock mode active...", Fore.GREEN)
+    log("[Active.]", _t("spin_lock_active"), Fore.GREEN)
     for t in threads:
         t.start()
     for t in threads:
@@ -630,7 +712,7 @@ def main() -> None:
 
     # ── 11. Laporan ──
     print()
-    log("[Info.]", "Laporan hasil war.", Fore.WHITE)
+    log("[Info.]", _t("war_log"), Fore.WHITE)
     time.sleep(1)
 
     for i in range(trigger_count):
@@ -639,11 +721,10 @@ def main() -> None:
             col, tag, detail = item
             log(tag.strip(), detail, col)
         else:
-            log("[Failed.]", f"Hero-{i + 1:02d} mengalami gangguan koneksi.", Fore.RED)
+            log("[Failed.]", _t("hero_down", i + 1), Fore.RED)
 
     print()
-    log("[Completed.]", "Pertempuran selesai.", Fore.GREEN)
+    log("[Completed.]", _t("war_done"), Fore.GREEN)
 
 if __name__ == "__main__":
     main()
-    
