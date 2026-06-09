@@ -15,3 +15,11 @@ Fix Bug & Optimization
 - Perhitungan average ping menggunakan weighted median.
 - Penambahan safety margin 30ms.
 --------
+v2.0.0-Rev.2026-06-05
+Major Improvement
+- Code Cleanup
+- Script Refactoring
+--------
+v1.0.0-Rev.2026-06-02
+Firs Release
+--------
