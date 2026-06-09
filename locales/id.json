@@ -20,6 +20,7 @@
   "cookie_reinput": "Silakan masukkan ulang seluruh credential.\n",
   "input_debug": " Mode Debug (y/n): ",
   "input_hero": " Recruit Hero (Default 4): ",
+  "input_margin": " Safety Margin (Default 30ms): ",
   "acc_ok": "ELIGIBLE (Siap War!)",
   "acc_block": "BLOCKED hingga {}",
   "acc_warn": "Akun belum berumur 30 Hari!",
@@ -50,4 +51,3 @@
   "hero_down": "Hero-{:02d} mengalami gangguan koneksi.",
   "war_done": "Pertempuran selesai."
 }
-
