@@ -116,12 +116,12 @@ def init_language() -> None:
     
     if force_update and os.path.exists(json_path):
         os.remove(json_path)
-        log("[Info.]", "Force updating language pack...", Fore.CYAN)
+        log("[DL.]", "Force updating language pack...", Fore.MAGENTA)
     # ───────────────────────────────────────────────────────────────────────
     
     if not os.path.exists(json_path):
         print()
-        log("[Info.]", f"Downloading language pack ({lang_code.upper()})...", Fore.CYAN)
+        log("[DL.]", f"Downloading language pack ({lang_code.upper()})...", Fore.MAGENTA)
         try:
             r = requests.get(f"{GITHUB_LOCALE_URL}{lang_code}.json", timeout=10)
             r.raise_for_status()
@@ -202,7 +202,7 @@ def get_ntp_offset() -> float:
             return r.offset * 1000.0
         except Exception:
             continue
-    log("[Error]", _t("ntp_err"), Fore.RED)
+    log("[Error.]", _t("ntp_err"), Fore.RED)
     return 0.0
 
 def get_accurate_now_ms(base_time_ms: int, perf_base_ns: int, offset_ms: float) -> float:
@@ -299,7 +299,7 @@ def test_cookie(cookie: str, label: str) -> bool:
         deadline  = data.get("deadline_format", "")
 
         if is_pass == 1:
-            log("[Approved..]", f"Status {label}: " + _t("acc_got", deadline), Fore.GREEN)
+            log("[Approved.]", f"Status {label}: " + _t("acc_got", deadline), Fore.GREEN)
             return True
 
         col, tag, msg = {
@@ -348,7 +348,7 @@ def check_update() -> None:
     log("[Info.]", _t("up_up", remote_version), Fore.WHITE)
     log("[Info.]", _t("up_now", CURRENT_VERSION), Fore.WHITE)
     print()
-    log("[Changelog.]", "", Fore.WHITE)
+    log("[Changelog.]", "", Fore.BLUE)
 
     try:
         r2 = requests.get(url_changelog, timeout=5)
@@ -636,7 +636,7 @@ def main() -> None:
             colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.YELLOW) + _t("cookie_a")
         ).strip()
         if not cookie_a:
-            log("[Error]", _t("cookie_0"), Fore.RED)
+            log("[Error.]", _t("cookie_0"), Fore.RED)
             continue
         log("[Success.]", _t("cookie_acc", "A") + colored("**********", Fore.WHITE), Fore.GREEN)
 
@@ -655,7 +655,7 @@ def main() -> None:
         if valid_a and valid_b:
             break
         print()
-        log("[Info.]", _t("cookie_reinput"), Fore.YELLOW)
+        log("[Input.]", _t("cookie_reinput"), Fore.YELLOW)
 
     # ── 2. DNS Pre-resolve ──
     print()
