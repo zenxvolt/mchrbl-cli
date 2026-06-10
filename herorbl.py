@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import gc
+import gzip
 import json
 import os
 import socket
@@ -12,25 +13,41 @@ import sys
 import getpass
 import time
 import threading
+import subprocess
+import random
+import re
 from datetime import datetime, timedelta, timezone
 
-import ntplib
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util import Retry
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+def auto_install(package: str):
+    print(f"[!] Installing missing module's: {package}...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package, "-q"])
+
+try:
+    import ntplib
+except ImportError:
+    auto_install("ntplib")
+    import ntplib
+
+try:
+    import requests
+except ImportError:
+    auto_install("requests")
+    import requests
 
 try:
     from colorama import Fore, Style, init as _colorama_init
-    _colorama_init(autoreset=True)
-    _COLORAMA = True
 except ImportError:
-    _COLORAMA = False
-    class Fore:  # type: ignore
-        MAGENTA = BLUE = GREEN = RED = YELLOW = CYAN = WHITE = ""
-    class Style:  # type: ignore
-        RESET_ALL = ""
+    auto_install("colorama")
+    from colorama import Fore, Style, init as _colorama_init
+
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+_colorama_init(autoreset=True)
+_COLORAMA = True
 
 # ─────────────────────── KONFIGURASI ─────────────────────── #
 STATE_URL       = "https://sgp-api.buy.mi.com/bbs/api/global/user/bl-switch/state"
@@ -45,7 +62,7 @@ MSG_WIDTH       = 16
 PING_SAMPLES    = 5
 BRACKET_FACTOR  = 0.8
 # SAFETY_MARGIN   = 30
-CURRENT_VERSION = "v3.1.1-Rev.2026.06.10"
+CURRENT_VERSION = "v3.3.0-Rev.2026.06.10"
 
 # ─────────────────────── RUNTIME FLAGS ─────────────────────── #
 print_lock = threading.Lock()
@@ -99,7 +116,7 @@ def init_language() -> None:
     
     if force_update and os.path.exists(json_path):
         os.remove(json_path)
-        log("[Info.]", "Force updating language pack...", Fore.YELLOW)
+        log("[Info.]", "Force updating language pack...", Fore.CYAN)
     # ───────────────────────────────────────────────────────────────────────
     
     if not os.path.exists(json_path):
@@ -444,10 +461,25 @@ def _decode_chunked(body: bytes) -> bytes:
 def _parse_response(raw: bytes) -> dict:
     if b"\r\n\r\n" not in raw:
         return {}
+
     headers_raw, body = raw.split(b"\r\n\r\n", 1)
-    if b"transfer-encoding: chunked" in headers_raw.lower():
+    headers_lower = headers_raw.lower()
+
+    if b"transfer-encoding: chunked" in headers_lower:
         body = _decode_chunked(body)
-    return json.loads(body.decode("utf-8", errors="ignore"))
+
+    if b"content-encoding: gzip" in headers_lower:
+        try:
+            body = gzip.decompress(body)
+        except Exception:
+            pass
+
+    try:
+        return json.loads(
+            body.decode("utf-8", errors="ignore")
+        )
+    except Exception:
+        return {}
 
 # ─────────────────────── SEND WAVE (THREAD) ─────────────────────── #
 def send_wave(
@@ -469,19 +501,34 @@ def send_wave(
             log("[Success.]", _t("pin_ok", id, core_id), Fore.GREEN)
         except Exception as e:
             log("[Warn!]", _t("pin_no", id, e), Fore.YELLOW)
-            
-    payload = '{"is_retry": false}'
+             
+    hex_chars = "0123456789ABCDEF"
+    fake_device_id = ''.join(random.choices(hex_chars, k=39))
+    
+    payload = '{"is_retry":false}' if id == 1 else '{"is_retry":true}'
+    payload_bytes = payload.encode("utf-8")
+    
+    dynamic_cookie = cookie
+    if "deviceId=" in dynamic_cookie:
+        dynamic_cookie = re.sub(r'deviceId=[^;]+', f'deviceId={fake_device_id}', dynamic_cookie)
+    else:
+        dynamic_cookie = dynamic_cookie if dynamic_cookie.endswith(';') else dynamic_cookie + ';'
+        dynamic_cookie += f'deviceId={fake_device_id};'
+
     raw_req = (
         f"POST /bbs/api/global/apply/bl-auth HTTP/1.1\r\n"
+        f"Cookie: {dynamic_cookie}\r\n"
+        f"Accept: application/json\r\n"
+        f"Content-Type: application/json; charset=utf-8\r\n"
+        f"Content-Length: {len(payload_bytes)}\r\n"
         f"Host: {SERVER_HOST}\r\n"
-        f"User-Agent: {USER_AGENT}\r\n"
-        f"Cookie: {cookie}\r\n"
-        f"Content-Type: application/json\r\n"
-        f"Content-Length: {len(payload)}\r\n"
         f"Connection: close\r\n"
+        f"Accept-Encoding: gzip\r\n"
+        f"User-Agent: {USER_AGENT}\r\n"
         f"\r\n"
-        f"{payload}"
-    ).encode("utf-8")
+    ).encode("utf-8") + payload_bytes
+    
+    # ─────────────────────────────────────────────────────────
 
     sock = None
     try:
@@ -570,9 +617,9 @@ def _countdown(
 # ─────────────────────── MAIN ─────────────────────── #
 def main() -> None:
     print(colored("=" * 56,                               Fore.CYAN))
-    print(colored("             MI-COMMUNITY HERO REQ-BL",  Fore.WHITE))
-    print(colored(f"                 {CURRENT_VERSION}",    Fore.YELLOW))
-    print(colored("               GitHub @ProjectRedis",    Fore.BLUE))
+    print(colored("                 MI-COMMUNITY HERO REQ-BL",  Fore.WHITE))
+    print(colored(f"                  {CURRENT_VERSION}",    Fore.YELLOW))
+    print(colored("                   GitHub @ProjectRedis",    Fore.BLUE))
     print(colored("=" * 56,                               Fore.CYAN))
     print()
 
@@ -731,4 +778,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-    
