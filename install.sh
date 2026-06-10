@@ -24,7 +24,6 @@ pkg install python git wget curl -y
 
 # 3. Install dependencies Python
 echo "[Info.] Install Python dependencies..."
-pip install --upgrade pip
 pip install requests colorama ntplib
 
 # 4. Unduh script herorbl.py
