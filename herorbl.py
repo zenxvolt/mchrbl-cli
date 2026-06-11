@@ -311,14 +311,10 @@ def test_cookie(cookie: str, label: str) -> bool:
         )
         log(tag, msg, col)
         
-        # --- [PERBAIKAN LOGIKA RETURN DI SINI] ---
-        # Hanya kembalikan True jika statusnya Valid/Eligible (4, 1)
         if (is_pass, btn_state) == (4, 1):
             return True
         
-        # Jika Blocked (4, 2), Warn (4, 3), atau status lainnya, tolak!
         return False
-        # -----------------------------------------
 
     except Exception as e:
         log("[Error.]", f"{label} " + _t("acc_down", e), Fore.RED)
