@@ -61,7 +61,6 @@ TAG_WIDTH       = 12
 MSG_WIDTH       = 16
 PING_SAMPLES    = 5
 BRACKET_FACTOR  = 0.8
-# SAFETY_MARGIN   = 30
 CURRENT_VERSION = "v3.3.0-Rev.2026.06.10"
 
 # ─────────────────────── RUNTIME FLAGS ─────────────────────── #
@@ -116,12 +115,12 @@ def init_language() -> None:
     
     if force_update and os.path.exists(json_path):
         os.remove(json_path)
-        log("[DL.]", "Force updating language pack...", Fore.MAGENTA)
+        log("[Info.]", "Force updating language pack...", Fore.CYAN)
     # ───────────────────────────────────────────────────────────────────────
     
     if not os.path.exists(json_path):
         print()
-        log("[DL.]", f"Downloading language pack ({lang_code.upper()})...", Fore.MAGENTA)
+        log("[Info.]", f"Downloading language pack ({lang_code.upper()})...", Fore.CYAN)
         try:
             r = requests.get(f"{GITHUB_LOCALE_URL}{lang_code}.json", timeout=10)
             r.raise_for_status()
@@ -202,7 +201,7 @@ def get_ntp_offset() -> float:
             return r.offset * 1000.0
         except Exception:
             continue
-    log("[Error.]", _t("ntp_err"), Fore.RED)
+    log("[Error]", _t("ntp_err"), Fore.RED)
     return 0.0
 
 def get_accurate_now_ms(base_time_ms: int, perf_base_ns: int, offset_ms: float) -> float:
@@ -299,7 +298,7 @@ def test_cookie(cookie: str, label: str) -> bool:
         deadline  = data.get("deadline_format", "")
 
         if is_pass == 1:
-            log("[Approved.]", f"Status {label}: " + _t("acc_got", deadline), Fore.GREEN)
+            log("[Approved..]", f"Status {label}: " + _t("acc_got", deadline), Fore.GREEN)
             return True
 
         col, tag, msg = {
@@ -311,7 +310,15 @@ def test_cookie(cookie: str, label: str) -> bool:
             (Fore.WHITE, "[Account.]", f"{label} " + _t("acc_pass", is_pass)),
         )
         log(tag, msg, col)
-        return True
+        
+        # --- [PERBAIKAN LOGIKA RETURN DI SINI] ---
+        # Hanya kembalikan True jika statusnya Valid/Eligible (4, 1)
+        if (is_pass, btn_state) == (4, 1):
+            return True
+        
+        # Jika Blocked (4, 2), Warn (4, 3), atau status lainnya, tolak!
+        return False
+        # -----------------------------------------
 
     except Exception as e:
         log("[Error.]", f"{label} " + _t("acc_down", e), Fore.RED)
@@ -348,7 +355,7 @@ def check_update() -> None:
     log("[Info.]", _t("up_up", remote_version), Fore.WHITE)
     log("[Info.]", _t("up_now", CURRENT_VERSION), Fore.WHITE)
     print()
-    log("[Changelog.]", "", Fore.BLUE)
+    log("[Changelog.]", "", Fore.WHITE)
 
     try:
         r2 = requests.get(url_changelog, timeout=5)
@@ -564,7 +571,7 @@ def send_wave(
             try:
                 raw_resp  = _recv_full(ssock)
                 resp_json = _parse_response(raw_resp)
-                result    = resp_json.get("data", {}).get("apply_result", -1)
+                result = (resp_json.get("data") or {}).get("apply_result", -1)
                 col, tag, msg = get_result_meaning(result)
                 output[id - 1] = (
                     col,
@@ -631,31 +638,52 @@ def main() -> None:
     print()
 
     # ── 1. Input & validasi cookie ──
-    while True:
-        cookie_a = getpass.getpass(
-            colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.YELLOW) + _t("cookie_a")
-        ).strip()
-        if not cookie_a:
-            log("[Error.]", _t("cookie_0"), Fore.RED)
-            continue
-        log("[Success.]", _t("cookie_acc", "A") + colored("**********", Fore.WHITE), Fore.GREEN)
+    valid_a = False
+    valid_b = False
+    cookie_a = ""
+    cookie_b = ""
 
-        cookie_b = getpass.getpass(
-            colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.YELLOW) + _t("cookie_b")
-        ).strip()
-        if cookie_b:
-            log("[Success.]", _t("cookie_acc", "B") + colored("**********", Fore.WHITE), Fore.GREEN)
+    while not (valid_a or valid_b):
+        
+        if not valid_a:
+            cookie_a = getpass.getpass(
+                colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.YELLOW) + _t("cookie_a") + _t("cookie_skip")
+            ).strip()
+            
+            if cookie_a:
+                log("[Success.]", _t("cookie_acc", "A") + colored("**********", Fore.WHITE), Fore.GREEN)
+                log("[Check!]", _t("cookie_check", "A"), Fore.MAGENTA)
+                if test_cookie(cookie_a, "Token-A"):
+                    valid_a = True
+                else:
+                    log("[Error.]", _t("cookie_ax"), Fore.RED)
+            else:
+                log("[Info.]", _t("cookie_as"), Fore.WHITE)
+
         print()
-        log("[Check!]", _t("cookie_check", "A"), Fore.MAGENTA)
-        valid_a = test_cookie(cookie_a, "Token-A")
-        valid_b = True
-        if cookie_b:
-            log("[Check!]", _t("cookie_check", "B"), Fore.MAGENTA)
-            valid_b = test_cookie(cookie_b, "Token-B")
-        if valid_a and valid_b:
-            break
-        print()
-        log("[Input.]", _t("cookie_reinput"), Fore.YELLOW)
+
+        if not valid_b:
+            cookie_b = getpass.getpass(
+                colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.YELLOW) + _t("cookie_b") + _t("cookie_skip")
+            ).strip()
+            
+            if cookie_b:
+                log("[Success.]", _t("cookie_acc", "B") + colored("**********", Fore.WHITE), Fore.GREEN)
+                log("[Check!]", _t("cookie_check", "B"), Fore.MAGENTA)
+                if test_cookie(cookie_b, "Token-B"):
+                    valid_b = True
+                else:
+                    log("[Error.]", _t("cookie_bx"), Fore.RED)
+            else:
+                log("[Info.]", _t("cookie_bs"), Fore.WHITE)
+
+        if not valid_a and not valid_b:
+            print()
+            log("[Warn!]", _t("cookie_warn"), Fore.YELLOW)
+            print()
+            
+    print()
+    log("[Success.]", _t("cookie_ready"), Fore.GREEN)
 
     # ── 2. DNS Pre-resolve ──
     print()
