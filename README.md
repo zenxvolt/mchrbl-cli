@@ -71,10 +71,12 @@ ubl-go
 
 1. Install aplikasi network sniffer bebas: **(Proxyman, HTTP Toolkit, HTTP Sniffer, PCAPdroid)**
 2. Jalankan aplikasi sniffer biasanya akan meminta izin VPN.
-3. Buka aplikasi **Xiaomi Community app** masuk ke halaman **Unlock Bootloader** di tab **Me** di pojok kanan bawah.
+3. Buka aplikasi **Mi Community** masuk ke halaman **Unlock Bootloader** di tab **Me** di pojok kanan bawah.
 4. Setelah itu balik ke aplikasi sniffer matikan VPN atau service nya
 5. lalu cari: `"https://sgp-api.buy.mi.com/bbs/api/global/apply/bl-auth"`
 6. Cari di bagian **Headers** apapun yg ada kata `"Cookie:"`. 
 6. Salin/Copy text setelah kata `"Cookie:"` dengan awalan `"new_bbs_serviceToken="`.
 7. Tempel/Paste di termux.
 8. Selesai
+
+**Catatan:** Jika menu **Unlock Bootloader** tidak muncul di aplikasi **Mi Community** ubah region ke **Global.**
