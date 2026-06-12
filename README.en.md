@@ -78,9 +78,9 @@ ubl-go
  2. Start the sniffer app; it will typically ask for VPN permissions to capture traffic locally.
  3. Open the official **Mi Community App**, navigate to the **Unlock Bootloader** page inside the **Me** tab (bottom-right corner).
  4. Go back to your sniffer app and stop the capturing session/VPN service.
- 5. Filter or search for this specific endpoint: "https://sgp-api.buy.mi.com/bbs/api/global/apply/bl-auth"
- 6. Look into the request **Headers** and locate the "Cookie:" field.
- 7. Copy the entire value string right after "Cookie:" (it should start with "new_bbs_serviceToken=").
+ 5. Filter or search for this specific endpoint: `"https://sgp-api.buy.mi.com/bbs/api/global/apply/bl-auth"`
+ 6. Look into the request **Headers** and locate the `"Cookie:"` field.
+ 7. Copy the entire value string right after `"Cookie:"` it should start with `"new_bbs_serviceToken="`.
  8. Paste it into Termux when prompted.
  9. Done!
  
