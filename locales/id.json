@@ -12,7 +12,7 @@
   "cpu_ok": "terdeteksi sebagai big core",
   "cpu_no": "Big core tidak terdeteksi (path /sys tidak tersedia)",
   "cookie_err": "Kadaluarsa / Need Login!",
-  "cookie_a": "Paste Cookie A: ",
+  "cookie_a": "Paste Cookie A:",
   "cookie_b": "Paste Cookie B:",
   "cookie_0": "Cookie A tidak boleh kosong!\n",
   "cookie_skip": "Enter untuk skip",
