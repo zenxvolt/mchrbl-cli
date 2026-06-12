@@ -9,64 +9,81 @@
 
 ---
 
-
 ![Python Version](https://img.shields.io/badge/Python-3.8%2B-blue?style=flat-square&logo=python)
 ![Platform](https://img.shields.io/badge/Platform-Termux%20%7C%20Linux%20%7C%20Windows-lightgrey?style=flat-square)
 ![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-success?style=flat-square)
 
-**MCHR-BL CLI** is an advanced bot script (Level HFT – *High-Frequency Trading*) specifically designed to grab Xiaomi Global *Unlock Bootloader* (UBL) tickets with nanosecond precision.
+**MCHR-BL CLI** is an advanced, HFT-level (*High-Frequency Trading*) bot script specifically engineered to secure Xiaomi Global *Unlock Bootloader* (UBL) slots with nanosecond precision. 
 
-Built with a brutal memory architecture, this script bypasses standard library latency by sending **Raw HTTP Socket** packets directly to Xiaomi’s server at the exact millisecond of the daily *reset*.
+Built with a highly optimized memory architecture, this script bypasses standard library latency overheads by injecting **Raw HTTP Socket** packets directly into Xiaomi's servers exactly at the daily quota reset millisecond.
 
 ---
+
 ## ⚡ Key Features
+
 | Feature | Description |
-|---|---|
-| **Raw Socket Execution** | Sends pure HTTP payloads without library overhead for the lowest possible latency. |
-| **Multiprocessing Design** | Completely free from the Python GIL. Each "Hero" runs in an isolated memory process. |
-| **Core Affinity** | Forces the OS to bind execution to Performance Cores (Anti-Throttling). |
-| **High-Precision Timer** | NTP time synchronization combined with nanosecond Hardware Clock resolution. |
-| **Dynamic Latency Bracket** | Intelligently spreads requests based on real-time PING fluctuations to the server. |
-| **Hardware Counter** | Calculates precise timing based on global and OS time offsets, then locks it using the perf-counter method. |
-## 📸 Preview
-![Hasil Approve](assets/preview-00.png)
+| :--- | :--- |
+| **Doppelganger** | Restructures HTTP Header Order and Fingerprint to mimic the original "Mi Community" app 100%. |
+| **Chameleon** | Automatically generates a 39-Hex Device ID and syncs it across each Hero via Regex to bypass Xiaomi's WAF Firewall. |
+| **Gungnir** | Executes Raw HTTP Sockets to dispatch payloads with zero library overhead for the lowest possible latency. |
+| **Chronobreak** | Calculates global time offsets and OS clock drift, locking the execution time precisely using `perf_counter`. |
+| **Bunshin** | Bypasses the Python GIL by running each "Hero" thread inside isolated system memory processes. |
+| **Berserk** | Overrides system scheduling to force-bind execution threads to the CPU's *Performance Cores* (Anti-Throttling). |
+| **Oracle** | High-precision NTP time synchronization coupled with OS *Hardware Clock* calibration for nanosecond accuracy. |
+| **Volley** | Smartly spreads out request bursts across an optimal timeline based on real-time PING fluctuations to the server. |
 
 ---
-## 🛠️ Prerequisites
-Works on any terminal environment.
-If you are using **Termux** on Android, you must use the [F-Droid](https://f-droid.org/id/packages/com.termux/) or [GitHub Release](https://github.com/termux/termux-app/releases) version, as the Play Store version is severely outdated.
-Run this command first for initial preparation:
+
+## 📸 Preview
+
+![Approve Result](assets/preview-00.png)
+
+---
+
+## 🛠️ Installation Guide (Android)
+
+1. Download **Termux**. It is mandatory to use the [F-Droid version](https://f-droid.org/id/packages/com.termux/) or the [GitHub Releases version](https://github.com/termux/termux-app/releases), as the Google Play Store version is heavily outdated.
+
+2. Run this command first to set up storage access:
 
 ```bash
 termux-setup-storage
-```
-Then grant permission and proceed with the following commands:
 
+```
+ 3. Allow the storage permission prompt on your screen, then continue with the following commands:
 ```bash
 pkg update && pkg upgrade -y
 pkg install python git curl -y
+
 ```
-
-Next, copy and paste this into your terminal:
-
+ 4. Copy and paste this installer script into Termux:
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/ProjectRedis/mchrbl-cli/refs/heads/main/install.sh)
+bash <(curl -s [https://raw.githubusercontent.com/ProjectRedis/mchrbl-cli/refs/heads/main/install.sh](https://raw.githubusercontent.com/ProjectRedis/mchrbl-cli/refs/heads/main/install.sh))
+
 ```
-
-Restart/reload your Termux and type:
-
+ 5. Reload or restart Termux, then type this command to run the tool:
 ```bash
 ubl-go
+
 ```
+**Notes:**
+ 1. This tool is highly effective when launched **5 minutes before the daily slot reset window**.
+ 2. When prompted with **Debug Mode: y/n**, choose **n**. Debug mode is strictly intended for internal testing and bug fixing.
+ 
+---
+
+## 🔑 How to Capture "Cookie" on Android
+ 1. Install any network packet sniffer app of your choice: **(Proxyman, HTTP Toolkit, HTTP Sniffer, PCAPdroid)**
+ 2. Start the sniffer app; it will typically ask for VPN permissions to capture traffic locally.
+ 3. Open the official **Mi Community App**, navigate to the **Unlock Bootloader** page inside the **Me** tab (bottom-right corner).
+ 4. Go back to your sniffer app and stop the capturing session/VPN service.
+ 5. Filter or search for this specific endpoint: "https://sgp-api.buy.mi.com/bbs/api/global/apply/bl-auth"
+ 6. Look into the request **Headers** and locate the "Cookie:" field.
+ 7. Copy the entire value string right after "Cookie:" (it should start with "new_bbs_serviceToken=").
+ 8. Paste it into Termux when prompted.
+ 9. Done!
+ 
+**Note:** If the **Unlock Bootloader** menu does not appear in your **Mi Community App**, make sure to change your app's region setting to **Global**.
 
 ---
-## 🔑 How to Get "Cookie" on Android
- 1. Install a network sniffer application (**Proxyman**, **HTTP Toolkit**, **HTTP Sniffer**, or **PCAPdroid**)—choose whichever you prefer.
- 2. Run the sniffer app; it will typically prompt for VPN permissions.
- 3. Open the **Xiaomi Community** app, navigate to the **Unlock Bootloader** page, located under the **Me** tab in the bottom right corner.
- 4. After that, return to the sniffer app, turn off the VPN or service, and search for:
-   [https://sgp-api.buy.mi.com/bbs/api/global/apply/bl-auth](https://sgp-api.buy.mi.com/bbs/api/global/apply/bl-auth)
- 5. Under the **Headers** section, look for anything containing Cookie:.
- 6. Copy the long string of text following Cookie: that starts with new_bbs_serviceToken.
- 7. That's it! Just paste it into the tool.
