@@ -43,4 +43,4 @@ elif [ -f ~/.zshrc ]; then
     source ~/.zshrc
 fi
 
-echo "[Success.] Instalasi selesai! Jalankan 'ubl-go' untuk memulai script."
+echo "[Success.] Instalasi selesai! Restart termux dan jalankan 'ubl-go' untuk memulai script."
