@@ -642,9 +642,9 @@ def main() -> None:
     while not (valid_a or valid_b):
         
         if not valid_a:
-            cookie_a = getpass.getpass(
-                colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.BLUE) + _t("cookie_a") + _t("cookie_skip")
-            ).strip()
+            label = f"{'[Input!]':<{LABEL_WIDTH}}"
+            prompt = colored(label, Fore.BLUE) + " " + _t("cookie_a") + _t("cookie_skip")
+            cookie_a = getpass.getpass(prompt)
             
             if cookie_a:
                 log("[Success.]", _t("cookie_acc", "A") + colored("**********", Fore.WHITE), Fore.GREEN)
@@ -659,9 +659,9 @@ def main() -> None:
         print()
 
         if not valid_b:
-            cookie_b = getpass.getpass(
-                colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.BLUE) + _t("cookie_b") + _t("cookie_skip")
-            ).strip()
+            label = f"{'[Input!]':<{LABEL_WIDTH}}"
+            prompt = colored(label, Fore.BLUE) + " " + _t("cookie_b") + _t("cookie_skip")
+            cookie_b = getpass.getpass(prompt)
             
             if cookie_b:
                 log("[Success.]", _t("cookie_acc", "B") + colored("**********", Fore.WHITE), Fore.GREEN)
