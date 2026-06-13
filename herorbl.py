@@ -115,12 +115,12 @@ def init_language() -> None:
     
     if force_update and os.path.exists(json_path):
         os.remove(json_path)
-        log("[Info.]", "Force updating language pack...", Fore.CYAN)
+        log("[DL.]", "Force updating language pack...", Fore.CYAN)
     # ───────────────────────────────────────────────────────────────────────
     
     if not os.path.exists(json_path):
         print()
-        log("[Info.]", f"Downloading language pack ({lang_code.upper()})...", Fore.CYAN)
+        log("[DL.]", f"Downloading language pack ({lang_code.upper()})...", Fore.CYAN)
         try:
             r = requests.get(f"{GITHUB_LOCALE_URL}{lang_code}.json", timeout=10)
             r.raise_for_status()
@@ -351,7 +351,7 @@ def check_update() -> None:
     log("[Info.]", _t("up_up", remote_version), Fore.WHITE)
     log("[Info.]", _t("up_now", CURRENT_VERSION), Fore.WHITE)
     print()
-    log("[Changelog.]", "", Fore.WHITE)
+    log("[Changelog.]", "", Fore.BLUE)
 
     try:
         r2 = requests.get(url_changelog, timeout=5)
