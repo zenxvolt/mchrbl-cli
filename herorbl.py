@@ -680,7 +680,7 @@ def main() -> None:
             
     print()
     log("[Success.]", _t("cookie_ready"), Fore.GREEN)
-    
+
     # ── 2. DNS Pre-resolve ──
     print()
     log("[Check!]", _t("dns_pre_start", SERVER_HOST), Fore.MAGENTA)
@@ -697,7 +697,7 @@ def main() -> None:
     # ── 4. Konfigurasi jadwal ──
     print()
     debug = (
-        input(colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.BLUE) + _t("input_debug"))
+        input(colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.BLUE) + " " + _t("input_debug"))
         .strip().lower() == "y"
     )
     target_ms = (
@@ -749,11 +749,20 @@ def main() -> None:
     output: dict[int, tuple] = {}
     threads: list[threading.Thread] = []
 
+    valid_cookies = []
+    if valid_a:
+        valid_cookies.append(("Tok-A", cookie_a))
+    if valid_b:
+        valid_cookies.append(("Tok-B", cookie_b))
+        
+    if not valid_cookies:
+        valid_cookies.append(("Tok-A", cookie_a))
+
     for idx, wave_off in enumerate(offsets):
         wave_id    = idx + 1
-        use_b      = bool(cookie_b) and (wave_id % 2 == 0)
-        tok_label  = "Tok-B" if use_b else "Tok-A"
-        cookie_use = cookie_b if use_b else cookie_a
+        
+        tok_label, cookie_use = valid_cookies[idx % len(valid_cookies)]
+        
         wave_target = base_send + wave_off
 
         dt_cst = datetime.fromtimestamp(wave_target / 1000.0, BEIJING_TZ)
@@ -772,7 +781,7 @@ def main() -> None:
         )
         threads.append(t)
         time.sleep(0.3)
-
+        
     # ── 9. Countdown menuju aba-aba ──
     _countdown(_t("wait_war"), base_send - 1000, time_base, perf_base, ntp_offset)
 
