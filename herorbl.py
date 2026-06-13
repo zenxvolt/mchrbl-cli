@@ -201,7 +201,7 @@ def get_ntp_offset() -> float:
             return r.offset * 1000.0
         except Exception:
             continue
-    log("[Error]", _t("ntp_err"), Fore.RED)
+    log("[Error.]", _t("ntp_err"), Fore.RED)
     return 0.0
 
 def get_accurate_now_ms(base_time_ms: int, perf_base_ns: int, offset_ms: float) -> float:
@@ -298,7 +298,7 @@ def test_cookie(cookie: str, label: str) -> bool:
         deadline  = data.get("deadline_format", "")
 
         if is_pass == 1:
-            log("[Approved..]", f"Status {label}: " + _t("acc_got", deadline), Fore.GREEN)
+            log("[Approved.]", f"Status {label}: " + _t("acc_got", deadline), Fore.GREEN)
             return True
 
         col, tag, msg = {
