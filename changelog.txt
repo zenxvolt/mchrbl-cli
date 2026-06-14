@@ -1,3 +1,15 @@
+v3.4.0-Rev.2026.06.15
+[Network & TCP Overhaul]
+- Raw Socket Ping: Fix bug ping kacau. Ping kini 100% identik dengan send_wave (raw SSL) agar kalkulasi bracket akurat.
+- TCP Optimization: Matikan Nagle's Algorithm (TCP_NODELAY) & Delayed ACK (TCP_QUICKACK) untuk memangkas delay kernel ~40ms.
+
+[Anti-Detection]
+- Micro Jitter: Random delay 1-8ms per Hero untuk menghindari deteksi bot. Nilai jitter kini ditampilkan di laporan hasil war.
+
+[Optimization & Stability]
+- Zero Dependencies: Hapus semua library eksternal, 100% native Python untuk loading lebih cepat & overhead lebih ringan.
+- Termux Wake-Lock: Cegah Android Doze men-suspend thread saat spin-lock. Auto-release saat script berhenti.
+--------
 v3.3.2-Rev.2026.06.14
 [Small Improvement]
 - Log Color: Sedikit perubahan warna pada log agar lebih jelas.
