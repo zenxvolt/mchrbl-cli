@@ -50,17 +50,14 @@ BRACKET_FACTOR  = 0.8
 CURRENT_VERSION = "v3.4.0-Rev.2026.06.15"
 
 # ─────────────────────── JITTER CONFIG ─────────────────────── #
-JITTER_MIN_MS = 1.0   # Minimum random delay before send (ms)
-JITTER_MAX_MS = 8.0   # Maximum random delay before send (ms)
-# Why 1-8ms: small enough to not lose the race, large enough to break
-# uniform timing patterns that anti-bot systems could flag.
+JITTER_MIN_MS = 1.0
+JITTER_MAX_MS = 8.0
 
 # ─────────────────────── PRE-COMPILED (module-level constants) ─────────────────────── #
 _DEVICE_ID_RE = re.compile(r'deviceId=[^;]+')
 _URL_PATH     = "/" + "/".join(UNLOCK_URL.split("/")[3:])
-_NTP_EPOCH    = 2208988800  # NTP epoch (1900) → Unix epoch (1970) offset in seconds
+_NTP_EPOCH    = 2208988800
 
-# Pre-built HEAD request for latency measurement (raw socket)
 _PING_REQ = (
     f"HEAD / HTTP/1.1\r\n"
     f"Host: {SERVER_HOST}\r\n"
@@ -69,12 +66,10 @@ _PING_REQ = (
     f"\r\n"
 ).encode("utf-8")
 
-# Pre-built SSL context for latency measurement (no cert verification needed)
 _PING_CTX = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 _PING_CTX.check_hostname = False
 _PING_CTX.verify_mode = ssl.CERT_NONE
 
-# Pre-resolved TCP_QUICKACK constant (fallback to raw kernel value 12)
 _TCP_QUICKACK = getattr(socket, 'TCP_QUICKACK', 12)
 
 # ─────────────────────── RUNTIME FLAGS ─────────────────────── #
@@ -91,6 +86,35 @@ GITHUB_LOCALE_URL = "https://raw.githubusercontent.com/ProjectRedis/mchrbl-cli/m
 MENU_BAHASA = {
     "1": {"code": "id", "name": "Bahasa Indonesia"},
     "2": {"code": "en", "name": "English"},
+}
+
+# Hardcoded fallback — guarantees script is always usable even without
+# network access, corrupted locale files, or failed downloads.
+_FALLBACK_TEXTS: dict[str, str] = {
+    "cpu_ok": "terdeteksi sebagai big core",
+    "cpu_no": "Big core tidak terdeteksi (path /sys tidak tersedia)",
+    "up_err": "Gagal cek update: {}",
+    "up_no": "Tidak bisa membaca versi di GitHub.",
+    "up_ok": "Script sudah terbaru ({})",
+    "up_up": "Update tersedia : {}",
+    "up_now": "Versi saat ini  : {}",
+    "up_ask": "Update sekarang? (y/n): ",
+    "up_late": "Melanjutkan menggunakan versi saat ini.",
+    "up_done": "Berhasil update ke {}",
+    "up_go": "Silakan jalankan ulang script.",
+    "up_fail": "Gagal update otomatis: {}",
+    "change_no": "Changelog tidak ditemukan.",
+    "err_send": "Send Error",
+    "err_parse": "Parse Error",
+    "err_ssl": "SSL/Connect Error",
+    "lang_select": "Select Language:",
+    "lang_choice": "Pilihan / Choice (1/2): ",
+    "lang_force": "Force updating language pack...",
+    "lang_dl": "Downloading language pack ({})...",
+    "lang_ok": "Language pack installed!",
+    "lang_fail": "Failed to download language: {}",
+    "lang_load_fail": "Failed to load language file: {}",
+    "wake_lock": "Wake-lock aktif (Anti-Doze)",
 }
 
 TEXTS: dict[str, str] = {}
@@ -158,7 +182,8 @@ def init_language() -> None:
 
 
 def _t(key: str, *args) -> str:
-    teks = TEXTS.get(key, key)
+    """Get translated text. Lookup order: TEXTS → _FALLBACK_TEXTS → key."""
+    teks = TEXTS.get(key) or _FALLBACK_TEXTS.get(key, key)
     if args:
         try:
             return teks.format(*args)
@@ -494,7 +519,7 @@ def check_update() -> None:
 
     print()
     jawab = input(
-        colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.BLUE) + " " + _t("up_ask")
+        colored(f'{"[Input!]":<{LABEL_WIDTH}}', Fore.BLUE) + _t("up_ask")
     ).strip().lower()
 
     if jawab != "y":
@@ -650,7 +675,7 @@ def send_wave(
 
     sock = None
     drift = 0.0
-    jitter_ms = 0.0  # Will be updated after jitter calculation
+    jitter_ms = 0.0
     try:
         sock = socket.create_connection((server_ip, 443), timeout=5)
         _apply_tcp_opts(sock)
@@ -662,11 +687,9 @@ def send_wave(
             except (OSError, AttributeError):
                 pass
 
-            # ── Calculate micro-jitter BEFORE entering sleep phase ──
-            jitter_ms      = random.uniform(JITTER_MIN_MS, JITTER_MAX_MS)
+            jitter_ms       = random.uniform(JITTER_MIN_MS, JITTER_MAX_MS)
             final_target_ms = target_ms + jitter_ms
 
-            # ── Busy-wait: Sleep phase ──
             while True:
                 remain = final_target_ms - get_accurate_now_ms(base_time_ms, perf_base_ns, offset_ms)
                 if remain > 20:
@@ -676,7 +699,6 @@ def send_wave(
                 else:
                     break
 
-            # ── Critical Section (GC disabled) ──
             _gc_disable()
             try:
                 while get_accurate_now_ms(base_time_ms, perf_base_ns, offset_ms) < final_target_ms:
