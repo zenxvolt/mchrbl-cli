@@ -88,8 +88,6 @@ MENU_BAHASA = {
     "2": {"code": "en", "name": "English"},
 }
 
-# Hardcoded fallback — guarantees script is always usable even without
-# network access, corrupted locale files, or failed downloads.
 _FALLBACK_TEXTS: dict[str, str] = {
     "cpu_ok": "terdeteksi sebagai big core",
     "cpu_no": "Big core tidak terdeteksi (path /sys tidak tersedia)",
